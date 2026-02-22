@@ -1,30 +1,36 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 from engine.core.body import BodySystem, Body
 from engine.core.simulation import Simulation
 from engine.forces.forces import MutualGravity
 from engine.integrators.semi_implicit_euler import SemiImplicitEuler
-from engine.analysis.energy import compute_energy_vert_grav, compute_energy_univ_grav
+from engine.integrators.explicit_euler import ExplicitEuler
+from audio.audio_manager import AudioManager
+from visualization.gui import run_gui
 
-from visualization.animator import animate, energy_graph
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-earth = Body(6e24, [0.0, 0.0], [0.0, 0.0])
-moon = Body(7.347673e22, [384000000.0, 0.0], [0.0, 1022.0])
+music_path = os.path.join(BASE_DIR, "audio", "music")
+sound_path = os.path.join(BASE_DIR, "audio", "sound")
 
-system = BodySystem([earth, moon])
+earth = Body(6e24, [0.0, 0.0], [0.0, 29780.0])
+moon = Body(7.347673e22, [384000000.0, 0.0], [0.0, 30802.0])
+sun = Body(1.9891e30, [-150000000000.0, 0.0], [0.0, 0.0])
 
+system = BodySystem([earth, moon, sun])
+audio = AudioManager(music_folder=music_path, sound_folder=sound_path)
 gravity = MutualGravity()
 integrator = SemiImplicitEuler()
 
-sim_dt = 2880
+sim_dt = 1440
 
 sim = Simulation(system, [gravity], integrator, dt=sim_dt)
 
-trajectory = []
-energy = []
-t_arr = []
-t = 0
+audio.play_random_music()
+audio.set_music_volume(0.05)
 
-animate(sim, body_system=system, dt=sim_dt, steps=2000)
-energy_graph(compute_energy_univ_grav, body_system=system, dt=sim_dt, steps=2000)
+print("Starting GUI...")
+run_gui(sim, audio)
+print("Killing GUI...")

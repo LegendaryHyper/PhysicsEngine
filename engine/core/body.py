@@ -12,7 +12,7 @@ class Body:
         self.mass = np.array(mass, dtype=float)
         self.position = np.array(position, dtype=float)
         self.velocity = np.array(velocity, dtype=float)
-        self.force = np.zeros_like(position)
+        self.force = np.zeros_like(position, dtype=float)
     def clear_forces(self):
         self.force.fill(0.0)
 
