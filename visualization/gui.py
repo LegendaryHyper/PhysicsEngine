@@ -67,7 +67,7 @@ def run_gui(audio):
             
             orbit_series_tags.append(l_tag)
             position_dot_tags.append(d_tag)
-        except ValueError():
+        except ValueError:
             print("Error: Please enter numerical values!")
     
     def switch_state(new_state):
@@ -175,11 +175,11 @@ def run_gui(audio):
         dpg.add_text(tag="body_velocity")
     with dpg.window(tag="body_creation", label="Body Creation", show=False, width=400, height=200, pos=(520, 425)):
         input_name = dpg.add_input_text(tag="input_body_name", hint="Object Name")
-        input_mass = dpg.add_input_text(tag="input_body_mass", hint="Object Mass")
-        dpg.add_text("Position")
+        input_mass = dpg.add_input_text(tag="input_body_mass", hint="Object Mass (kg)")
+        dpg.add_text("Position (m)")
         input_position_x = dpg.add_input_text(tag="input_body_position_x", hint="x")
         input_position_y = dpg.add_input_text(tag="input_body_position_y", hint="y")
-        dpg.add_text("Velocity")
+        dpg.add_text("Velocity (m/s)")
         input_velocity_x = dpg.add_input_text(tag="input_body_velocity_x", hint="x")
         input_velocity_y = dpg.add_input_text(tag="input_body_velocity_y", hint="y")
         dpg.add_button(tag="create_body_button", label="Create Body", callback=create_body)
