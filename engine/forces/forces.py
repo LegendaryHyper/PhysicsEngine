@@ -27,5 +27,7 @@ class DownwardsGravity(Force):
     def __init__(self, g=9.81):
         self.g = g
     
-    def apply(self, system):
-        system.forces[:, 1] -= system.masses * self.g
+    def apply(self, body_system):
+        bodies = body_system.bodies
+        for i, body in enumerate(bodies):
+            body.force[1] -= self.g * body.mass

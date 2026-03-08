@@ -2,6 +2,7 @@ import dearpygui.dearpygui as dpg
 import ctypes
 import numpy as np
 from engine.analysis.energy import compute_energy_univ_grav
+from engine.core.body import Body, BodySystem
 
 from scenarios.orbital_scenario import OrbitalScenario
 from scenarios.earth_surface_scenario import EarthSurfaceScenario
@@ -46,6 +47,29 @@ def run_gui(audio):
         auto_scale = not auto_scale
         audio.play_sound("click")
     
+    def create_body():
+        try:
+            name = dpg.get_value("input_body_name")
+            mass = float(dpg.get_value("input_body_mass"))
+            
+            px = float(dpg.get_value("input_body_position_x"))
+            py = float(dpg.get_value("input_body_position_y"))
+            
+            vx = float(dpg.get_value("input_body_velocity_x"))
+            vy = float(dpg.get_value("input_body_velocity_y"))
+
+            new_body = Body(name=name, mass=mass, position=[px, py], velocity=[vx, vy])
+            sim.body_system.bodies.append(new_body)
+            
+            orbit_data.append({"x": [], "y": []})
+            l_tag = dpg.add_line_series([], [], parent=orbit_y_axis)
+            d_tag = dpg.add_scatter_series([], [], parent=orbit_y_axis)
+            
+            orbit_series_tags.append(l_tag)
+            position_dot_tags.append(d_tag)
+        except ValueError():
+            print("Error: Please enter numerical values!")
+    
     def switch_state(new_state):
         nonlocal current_state
         current_state = new_state
@@ -61,6 +85,7 @@ def run_gui(audio):
             dpg.configure_item("energy_display", show=True)
             dpg.configure_item("audio_displayer", show=True)
             dpg.configure_item("body_info", show=True)
+            dpg.configure_item("body_creation", show=True)
     
     def load_scenario(scenario_name):
         nonlocal sim, orbit_data, orbit_series_tags, position_dot_tags, times, energies, camera_half_range, halo_tag
@@ -143,11 +168,21 @@ def run_gui(audio):
         dpg.add_text(label="Now playing: ", tag="music_name_displayer")
         dpg.add_slider_float(label="Music volume", min_value=0.0, max_value=1, default_value=0.05, callback=set_music_volume)
         dpg.add_slider_float(label="Audio volume", min_value=0.0, max_value=1, default_value=1, callback=set_audio_volume)
-    with dpg.window(tag="body_info", label="Body Info", show=False, width=400, height=125, pos=(520, 300)):
+    with dpg.window(tag="body_info", label="Body Info", show=False, width=400, height=125, pos=(520, 290)):
         dpg.add_text(tag="body_name")
         dpg.add_text(tag="body_mass")
         dpg.add_text(tag="body_position")
         dpg.add_text(tag="body_velocity")
+    with dpg.window(tag="body_creation", label="Body Creation", show=False, width=400, height=200, pos=(520, 425)):
+        input_name = dpg.add_input_text(tag="input_body_name", hint="Object Name")
+        input_mass = dpg.add_input_text(tag="input_body_mass", hint="Object Mass")
+        dpg.add_text("Position")
+        input_position_x = dpg.add_input_text(tag="input_body_position_x", hint="x")
+        input_position_y = dpg.add_input_text(tag="input_body_position_y", hint="y")
+        dpg.add_text("Velocity")
+        input_velocity_x = dpg.add_input_text(tag="input_body_velocity_x", hint="x")
+        input_velocity_y = dpg.add_input_text(tag="input_body_velocity_y", hint="y")
+        dpg.add_button(tag="create_body_button", label="Create Body", callback=create_body)
     
     
     user32 = ctypes.windll.user32
@@ -185,7 +220,7 @@ def run_gui(audio):
                     camera_center[1] = my + (cy - my) * zoom_factor
                     
                     camera_half_range *= zoom_factor
-                    camera_half_range = max(camera_half_range, 1e7)
+                    #camera_half_range = max(camera_half_range, 1e7)
         dpg.add_mouse_wheel_handler(callback=mouse_wheel_handler)
         def mouse_click_handler(sender, app_data):
             nonlocal is_dragging, last_mouse_pos, active_body
@@ -203,8 +238,6 @@ def run_gui(audio):
 
                     for body in sim.body_system.bodies:
                         x, y = body.position
-                        print(f"Body Position: {x}, {y}")
-                        
                         dist = ((x - mx)**2 + (y - my)**2)**0.5
                         
                         if dist < closest_dist:
@@ -215,9 +248,6 @@ def run_gui(audio):
                         
                     else:
                         active_body = None
-                    print(f"Closest Distance: {closest_dist}")
-                    print(f"Selection Radius: {selection_radius}")
-                    print(f"mx, my: {mx}, {my}")
         def mouse_release_handler(sender, app_data):
             nonlocal is_dragging
             if app_data == 0:
