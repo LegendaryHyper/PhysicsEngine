@@ -16,3 +16,5 @@ class OrbitalScenario:
         sim_dt = 1440
 
         sim = Simulation(system, [gravity], integrator, dt=sim_dt)
+        
+        return sim
