@@ -8,7 +8,9 @@ sound_path = os.path.join(BASE_DIR, "audio", "sound")
 
 audio = AudioManager(music_folder=music_path, sound_folder=sound_path)
 audio.play_random_music()
-audio.set_music_volume(0.05)
+audio.set_music_volume(0.025)
 
 if __name__ == "__main__":
+    print("Starting GUI...")
     run_gui(audio=audio)
+    print("Killing GUI...")

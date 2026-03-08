@@ -13,4 +13,3 @@ class Simulation:
             force.apply(self.body_system)
         self.integrator.step(self.body_system, self.dt)
         self.time += self.dt
-        print(f"Days: {self.time/86400}")

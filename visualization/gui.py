@@ -13,6 +13,9 @@ def run_gui(audio):
 
     current_state = "MAIN_MENU"
     sim = None
+    active_body = None
+    halo_tag = None
+    
     orbit_data = []
     orbit_series_tags = []
     position_dot_tags = []
@@ -22,6 +25,7 @@ def run_gui(audio):
     camera_center = np.array([0.0, 0.0])
     camera_half_range = 2e11
     zoom_sensitivity = 0.1
+    halo_size = 12
     auto_scale = True
     paused = False
 
@@ -56,9 +60,10 @@ def run_gui(audio):
             dpg.configure_item("sim_screen", show=True)
             dpg.configure_item("energy_display", show=True)
             dpg.configure_item("audio_displayer", show=True)
+            dpg.configure_item("body_info", show=True)
     
     def load_scenario(scenario_name):
-        nonlocal sim, orbit_data, orbit_series_tags, position_dot_tags, times, energies, camera_half_range
+        nonlocal sim, orbit_data, orbit_series_tags, position_dot_tags, times, energies, camera_half_range, halo_tag
         print("Loading...")
         try:
             new_sim = None
@@ -97,20 +102,29 @@ def run_gui(audio):
             orbit_series_tags.append(l_tag)
             position_dot_tags.append(d_tag)
         
+        halo_tag = dpg.add_scatter_series([], [], parent="orbit_y_axis")
+        
+        with dpg.theme() as halo_theme:
+            with dpg.theme_component(dpg.mvScatterSeries):
+                dpg.add_theme_style(dpg.mvPlotStyleVar_MarkerSize, halo_size)
+                dpg.add_theme_color(dpg.mvPlotCol_MarkerFill, (0, 0, 0, 0))
+                dpg.add_theme_color(dpg.mvPlotCol_MarkerOutline, (255, 255, 0, 255))
+        
+        dpg.bind_item_theme(halo_tag, halo_theme)
+        
         switch_state("SIMULATING")
         
         print("Switched state!")
     
-    with dpg.window(tag="main_menu_win", label="Physics Engine v1.0", width=400, height=300):
-        dpg.add_text("Welcome to the Physics Simulator")
+    with dpg.window(tag="main_menu_win", label="Physics Engine v1.0", width=400, height=300, pos=(560, 290)):
+        dpg.add_text("PHYSICS Engine v1.0")
         dpg.add_button(label="RUN", width=200, callback=lambda: switch_state("SCENARIO_SELECT"))
         dpg.add_button(label="EXIT", width=200, callback=lambda: dpg.stop_dearpygui())
-    with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300):
+    with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300, pos=(560, 290)):
         dpg.add_button(label="Orbital", callback=lambda: load_scenario("orbital"))
         dpg.add_button(label="Earth Surface", callback=lambda: load_scenario("earth_surface"))
         dpg.add_spacer(height=20)
         dpg.add_button(label="BACK", callback=lambda: switch_state("MAIN_MENU"))
-    
     with dpg.window(tag="sim_screen", label="Earth and Moon", show=False):
         with dpg.plot(label="Orbit", tag="pos_displayer", height=500, width=500, no_mouse_pos=True, no_box_select=True, no_menus=True):
             orbit_x_axis = dpg.add_plot_axis(dpg.mvXAxis, tag="orbit_x_axis")
@@ -119,6 +133,7 @@ def run_gui(audio):
         dpg.add_button(label="Auto Scale", callback=toggle_auto_scale)
         dpg.add_text(label="Time passed (days): ", tag="time_displayer")
         dpg.add_text(label="Playing", tag="pause_displayer")
+        dpg.set_value("pause_displayer", "Playing")
     with dpg.window(tag="energy_display", label="Energy Graph in Time", pos=(520, 0), show=False):
         with dpg.plot(label="Energy", tag="energy_plot", height=250, width=600):
             energy_x_axis = dpg.add_plot_axis(dpg.mvXAxis)
@@ -128,7 +143,13 @@ def run_gui(audio):
         dpg.add_text(label="Now playing: ", tag="music_name_displayer")
         dpg.add_slider_float(label="Music volume", min_value=0.0, max_value=1, default_value=0.05, callback=set_music_volume)
         dpg.add_slider_float(label="Audio volume", min_value=0.0, max_value=1, default_value=1, callback=set_audio_volume)
-
+    with dpg.window(tag="body_info", label="Body Info", show=False, width=400, height=125, pos=(520, 300)):
+        dpg.add_text(tag="body_name")
+        dpg.add_text(tag="body_mass")
+        dpg.add_text(tag="body_position")
+        dpg.add_text(tag="body_velocity")
+    
+    
     user32 = ctypes.windll.user32
     screen_width = user32.GetSystemMetrics(0)
     screen_height = user32.GetSystemMetrics(1)
@@ -167,12 +188,36 @@ def run_gui(audio):
                     camera_half_range = max(camera_half_range, 1e7)
         dpg.add_mouse_wheel_handler(callback=mouse_wheel_handler)
         def mouse_click_handler(sender, app_data):
-            nonlocal is_dragging, last_mouse_pos
+            nonlocal is_dragging, last_mouse_pos, active_body
             if app_data == 0:
                 if current_state == "SIMULATING":
                     if dpg.is_item_hovered("pos_displayer"):
                         is_dragging = True
                         last_mouse_pos = dpg.get_mouse_pos()
+            elif app_data == 1:
+                if current_state == "SIMULATING":
+                    selection_radius = camera_half_range * 0.02
+                    mx, my = dpg.get_plot_mouse_pos()
+                    selected_body = None
+                    closest_dist = float("inf")
+
+                    for body in sim.body_system.bodies:
+                        x, y = body.position
+                        print(f"Body Position: {x}, {y}")
+                        
+                        dist = ((x - mx)**2 + (y - my)**2)**0.5
+                        
+                        if dist < closest_dist:
+                            closest_dist = dist
+                            selected_body = body
+                    if closest_dist < selection_radius:
+                        active_body = selected_body
+                        
+                    else:
+                        active_body = None
+                    print(f"Closest Distance: {closest_dist}")
+                    print(f"Selection Radius: {selection_radius}")
+                    print(f"mx, my: {mx}, {my}")
         def mouse_release_handler(sender, app_data):
             nonlocal is_dragging
             if app_data == 0:
@@ -275,7 +320,22 @@ def run_gui(audio):
                 
             dpg.set_value("energy_series", [times, energies])
             dpg.set_value("time_displayer", f"Time passed (days): {round((sim.time/86400), ndigits=1)}")
-
+            if active_body:
+                vx, vy = active_body.velocity
+                x, y = active_body.position
+                dpg.set_value(halo_tag, [[x], [y]])
+                
+                dpg.set_value("body_name", active_body.name)
+                dpg.set_value("body_mass", f"Mass: {active_body.mass}")
+                dpg.set_value("body_position", f"Position (x, y): ({x}, {y})")
+                dpg.set_value("body_velocity", f"Velocity: {round((vx**2+vy**2)**0.5, 2)} m/s")
+            else:
+                dpg.set_value(halo_tag, [[], []])
+                dpg.set_value("body_name", "No body selected")
+                dpg.set_value("body_mass", "")
+                dpg.set_value("body_position", "")
+                dpg.set_value("body_velocity", "")
+            
         dpg.render_dearpygui_frame()
 
     dpg.destroy_context()
