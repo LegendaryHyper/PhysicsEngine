@@ -70,6 +70,38 @@ def run_gui(audio):
         except ValueError:
             print("Error: Please enter numerical values!")
     
+    def clear_bodies():
+        nonlocal active_body
+        sim.body_system.bodies.clear()
+        
+        for tag in orbit_series_tags:
+            if dpg.does_item_exist(tag):
+                dpg.delete_item(tag)
+        
+        for tag in position_dot_tags:
+            if dpg.does_item_exist(tag):
+                dpg.delete_item(tag)
+        
+        orbit_data.clear()
+        orbit_series_tags.clear()
+        position_dot_tags.clear()
+        active_body = None
+    
+    def delete_body():
+        nonlocal active_body
+        for i, body in enumerate(sim.body_system.bodies):
+            if body == active_body:
+                if dpg.does_item_exist(orbit_series_tags[i]):
+                    dpg.delete_item(orbit_series_tags[i])
+                if dpg.does_item_exist(position_dot_tags[i]):
+                    dpg.delete_item(position_dot_tags[i])
+                orbit_data.pop(i)
+                orbit_series_tags.pop(i)
+                position_dot_tags.pop(i)
+        sim.body_system.bodies.remove(active_body)
+        active_body = None
+        
+    
     def switch_state(new_state):
         nonlocal current_state
         current_state = new_state
@@ -156,6 +188,7 @@ def run_gui(audio):
             orbit_y_axis = dpg.add_plot_axis(dpg.mvYAxis, tag="orbit_y_axis")
         dpg.add_button(label="Pause/Resume", callback=toggle_pause)
         dpg.add_button(label="Auto Scale", callback=toggle_auto_scale)
+        dpg.add_button(label="Clear Bodies", callback=clear_bodies)
         dpg.add_text(label="Time passed (days): ", tag="time_displayer")
         dpg.add_text(label="Playing", tag="pause_displayer")
         dpg.set_value("pause_displayer", "Playing")
@@ -173,6 +206,7 @@ def run_gui(audio):
         dpg.add_text(tag="body_mass")
         dpg.add_text(tag="body_position")
         dpg.add_text(tag="body_velocity")
+        dpg.add_button(label="Delete Body", tag="delete_body_button", callback=delete_body)
     with dpg.window(tag="body_creation", label="Body Creation", show=False, width=400, height=200, pos=(520, 425)):
         input_name = dpg.add_input_text(tag="input_body_name", hint="Object Name")
         input_mass = dpg.add_input_text(tag="input_body_mass", hint="Object Mass (kg)")
@@ -359,12 +393,14 @@ def run_gui(audio):
                 dpg.set_value("body_mass", f"Mass: {active_body.mass}")
                 dpg.set_value("body_position", f"Position (x, y): ({x}, {y})")
                 dpg.set_value("body_velocity", f"Velocity: {round((vx**2+vy**2)**0.5, 2)} m/s")
+                dpg.configure_item("delete_body_button", show=True)
             else:
                 dpg.set_value(halo_tag, [[], []])
                 dpg.set_value("body_name", "No body selected")
                 dpg.set_value("body_mass", "")
                 dpg.set_value("body_position", "")
                 dpg.set_value("body_velocity", "")
+                dpg.configure_item("delete_body_button", show=False)
             
         dpg.render_dearpygui_frame()
 
