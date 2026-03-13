@@ -3,7 +3,7 @@ import ctypes
 import numpy as np
 from engine.analysis.energy import compute_energy_univ_grav
 from engine.core.body import Body, BodySystem
-
+import time
 from scenarios.orbital_scenario import OrbitalScenario
 from scenarios.earth_surface_scenario import EarthSurfaceScenario
 
@@ -11,7 +11,7 @@ def run_gui(audio):
     
     dpg.create_context()
     print(f"Running on DearPyGUI {dpg.get_dearpygui_version()}")
-
+    
     current_state = "MAIN_MENU"
     sim = None
     active_body = None
@@ -46,7 +46,11 @@ def run_gui(audio):
         nonlocal auto_scale
         auto_scale = not auto_scale
         audio.play_sound("click")
-    
+    def exit_app():
+        audio.play_sound("click")
+        time.sleep(0.25)
+        dpg.stop_dearpygui()
+        
     def create_body():
         try:
             name = dpg.get_value("input_body_name")
@@ -69,6 +73,7 @@ def run_gui(audio):
             position_dot_tags.append(d_tag)
         except ValueError:
             print("Error: Please enter numerical values!")
+        audio.play_sound("click")
     
     def clear_bodies():
         nonlocal active_body
@@ -86,6 +91,7 @@ def run_gui(audio):
         orbit_series_tags.clear()
         position_dot_tags.clear()
         active_body = None
+        audio.play_sound("click")
     
     def delete_body():
         nonlocal active_body
@@ -100,6 +106,7 @@ def run_gui(audio):
                 position_dot_tags.pop(i)
         sim.body_system.bodies.remove(active_body)
         active_body = None
+        audio.play_sound("click")
         
     def set_dt(sender, app_data):
         sim.dt = app_data
@@ -107,7 +114,7 @@ def run_gui(audio):
     def switch_state(new_state):
         nonlocal current_state
         current_state = new_state
-        for tag in ["main_menu_win", "scenario_win", "sim_screen", "energy_display", "settings_window"]:
+        for tag in ["main_menu_win", "scenario_win", "sim_screen", "energy_display", "settings_window", "body_info", "body_creation"]:
             if dpg.does_item_exist(tag): dpg.configure_item(tag, show=False)
         
         if new_state == "MAIN_MENU":
@@ -120,6 +127,7 @@ def run_gui(audio):
             dpg.configure_item("settings_window", show=True)
             dpg.configure_item("body_info", show=True)
             dpg.configure_item("body_creation", show=True)
+        audio.play_sound("click")
     
     def load_scenario(scenario_name):
         nonlocal sim, orbit_data, orbit_series_tags, position_dot_tags, times, energies, camera_half_range, halo_tag
@@ -150,9 +158,11 @@ def run_gui(audio):
 
         if dpg.does_item_exist("orbit_y_axis"):
             dpg.delete_item("orbit_y_axis", children_only=True)
-            
+        
         orbit_series_tags.clear()
         position_dot_tags.clear()
+        times.clear()
+        energies.clear()
         
         for i, _ in enumerate(sim.body_system.bodies):
             l_tag = dpg.add_line_series([], [], parent="orbit_y_axis")
@@ -177,10 +187,10 @@ def run_gui(audio):
         
         print("Switched state!")
     
-    with dpg.window(tag="main_menu_win", label="Physics Engine v1.0", width=400, height=300, pos=(560, 290)):
-        dpg.add_text("PHYSICS Engine v1.0")
+    with dpg.window(tag="main_menu_win", label="Physics Engine v1.1", width=400, height=300, pos=(560, 290)):
+        dpg.add_text("PHYSICS Engine v1.1")
         dpg.add_button(label="RUN", width=200, callback=lambda: switch_state("SCENARIO_SELECT"))
-        dpg.add_button(label="EXIT", width=200, callback=lambda: dpg.stop_dearpygui())
+        dpg.add_button(label="EXIT", width=200, callback=exit_app)
     with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300, pos=(560, 290)):
         dpg.add_button(label="Orbital", callback=lambda: load_scenario("orbital"))
         dpg.add_button(label="Earth Surface", callback=lambda: load_scenario("earth_surface"))
@@ -206,7 +216,8 @@ def run_gui(audio):
         dpg.add_text(label="Now playing: ", tag="music_name_displayer")
         dpg.add_slider_float(label="Music volume", min_value=0.0, max_value=1, default_value=0.05, callback=set_music_volume)
         dpg.add_slider_float(label="Audio volume", min_value=0.0, max_value=1, default_value=1, callback=set_audio_volume)
-        dpg.add_button(label="Exit", tag="exit_button", callback=lambda: dpg.stop_dearpygui())
+        dpg.add_button(label="Main Menu", tag="main_menu_button", callback=lambda: switch_state("MAIN_MENU"))
+        dpg.add_button(label="Exit", tag="exit_button", callback=exit_app)
     with dpg.window(tag="body_info", label="Body Info", show=False, width=400, height=125, pos=(520, 290)):
         dpg.add_text(tag="body_name")
         dpg.add_text(tag="body_mass")
