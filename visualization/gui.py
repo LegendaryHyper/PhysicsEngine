@@ -101,11 +101,13 @@ def run_gui(audio):
         sim.body_system.bodies.remove(active_body)
         active_body = None
         
+    def set_dt(sender, app_data):
+        sim.dt = app_data
     
     def switch_state(new_state):
         nonlocal current_state
         current_state = new_state
-        for tag in ["main_menu_win", "scenario_win", "sim_screen", "energy_display", "audio_displayer"]:
+        for tag in ["main_menu_win", "scenario_win", "sim_screen", "energy_display", "settings_window"]:
             if dpg.does_item_exist(tag): dpg.configure_item(tag, show=False)
         
         if new_state == "MAIN_MENU":
@@ -115,7 +117,7 @@ def run_gui(audio):
         elif new_state == "SIMULATING":
             dpg.configure_item("sim_screen", show=True)
             dpg.configure_item("energy_display", show=True)
-            dpg.configure_item("audio_displayer", show=True)
+            dpg.configure_item("settings_window", show=True)
             dpg.configure_item("body_info", show=True)
             dpg.configure_item("body_creation", show=True)
     
@@ -169,6 +171,8 @@ def run_gui(audio):
         
         dpg.bind_item_theme(halo_tag, halo_theme)
         
+        dpg.configure_item("dt_slider", default_value=sim.dt)
+        
         switch_state("SIMULATING")
         
         print("Switched state!")
@@ -189,6 +193,7 @@ def run_gui(audio):
         dpg.add_button(label="Pause/Resume", callback=toggle_pause)
         dpg.add_button(label="Auto Scale", callback=toggle_auto_scale)
         dpg.add_button(label="Clear Bodies", callback=clear_bodies)
+        dpg.add_slider_float(label="dt", tag="dt_slider", min_value = 0.001, max_value=500000, default_value=1, callback=set_dt)
         dpg.add_text(label="Time passed (days): ", tag="time_displayer")
         dpg.add_text(label="Playing", tag="pause_displayer")
         dpg.set_value("pause_displayer", "Playing")
@@ -197,10 +202,11 @@ def run_gui(audio):
             energy_x_axis = dpg.add_plot_axis(dpg.mvXAxis)
             energy_y_axis = dpg.add_plot_axis(dpg.mvYAxis)
             dpg.add_line_series([], [], tag="energy_series", parent=energy_y_axis)
-    with dpg.window(tag="audio_displayer", label="Audio Displayer", width=330, height=100, pos=(1210, 0), show=False):
+    with dpg.window(tag="settings_window", label="Settings", width=330, height=150, pos=(1210, 0), show=False):
         dpg.add_text(label="Now playing: ", tag="music_name_displayer")
         dpg.add_slider_float(label="Music volume", min_value=0.0, max_value=1, default_value=0.05, callback=set_music_volume)
         dpg.add_slider_float(label="Audio volume", min_value=0.0, max_value=1, default_value=1, callback=set_audio_volume)
+        dpg.add_button(label="Exit", tag="exit_button", callback=lambda: dpg.stop_dearpygui())
     with dpg.window(tag="body_info", label="Body Info", show=False, width=400, height=125, pos=(520, 290)):
         dpg.add_text(tag="body_name")
         dpg.add_text(tag="body_mass")
