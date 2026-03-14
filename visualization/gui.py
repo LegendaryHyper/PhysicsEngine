@@ -1,10 +1,12 @@
 import dearpygui.dearpygui as dpg
 import ctypes
 import numpy as np
+import time
+
 from engine.analysis.energy import compute_energy_univ_grav
 from engine.core.body import Body, BodySystem
 from engine.forces.force_events import ForceEvent
-import time
+
 from scenarios.orbital_scenario import OrbitalScenario
 from scenarios.earth_surface_scenario import EarthSurfaceScenario
 
@@ -88,6 +90,15 @@ def run_gui(audio):
             fy = float(dpg.get_value("input_impulse_y"))
             delta_t = float(dpg.get_value("input_impulse_time"))
             sim.force_events.append(ForceEvent(body=active_body, force=np.array([fx, fy]), remaining_time=50*delta_t))
+        except ValueError:
+            print("Error: Please enter numerical values!")
+        audio.play_sound("click")
+    
+    def apply_advanced_settings():
+        nonlocal max_trail, history_time_window
+        try:
+            max_trail = int(dpg.get_value("max_trail_input"))
+            history_time_window = int(dpg.get_value("history_time_window_input"))
         except ValueError:
             print("Error: Please enter numerical values!")
         audio.play_sound("click")
@@ -206,8 +217,8 @@ def run_gui(audio):
         
         print("Switched state!")
     
-    with dpg.window(tag="main_menu_win", label="Physics Engine v1.3.1", width=400, height=300, pos=(560, 290)):
-        dpg.add_text("PHYSICS Engine v1.3.1")
+    with dpg.window(tag="main_menu_win", label="PHYSICS ENGINE v1.4", width=400, height=300, pos=(560, 290)):
+        dpg.add_text("Physics Engine v1.4")
         dpg.add_button(label="RUN", width=200, callback=lambda: switch_state("SCENARIO_SELECT"))
         dpg.add_button(label="EXIT", width=200, callback=exit_app)
     with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300, pos=(560, 290)):
@@ -239,6 +250,12 @@ def run_gui(audio):
         dpg.add_slider_float(label="Audio volume", min_value=0.0, max_value=1, default_value=1, callback=set_audio_volume)
         dpg.add_button(label="Main Menu", tag="main_menu_button", callback=lambda: switch_state("MAIN_MENU"))
         dpg.add_button(label="Exit", tag="exit_button", callback=exit_app)
+        dpg.add_text("")
+        dpg.add_text(tag="advanced_settings", label="Advanced Settings")
+        dpg.set_value("advanced_settings", "Advanced Settings")
+        dpg.add_input_text(tag="max_trail_input", hint="Max Trail (def. 2000)")
+        dpg.add_input_text(tag="history_time_window_input", hint="History Time Window (def. 30s)")
+        dpg.add_button(label="Apply Settings", tag="apply_settings_window", callback=apply_advanced_settings)
     with dpg.window(tag="body_info", label="Body Info", show=False, width=450, height=125, pos=(520, 290)):
         dpg.add_text(tag="body_name")
         dpg.add_text(tag="body_mass")
@@ -362,6 +379,8 @@ def run_gui(audio):
     while dpg.is_dearpygui_running():
         
         audio.update()
+        dpg.set_value("music_name_displayer", f"Now playing: {audio.get_current_track()}")
+        
         
         if current_state == "SIMULATING" and sim is not None:
             if not paused:

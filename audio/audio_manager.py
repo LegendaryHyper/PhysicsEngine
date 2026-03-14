@@ -45,3 +45,7 @@ class AudioManager():
     def set_sfx_volume(self, volume):
         for sound in self.sounds.values():
             sound.set_volume(volume)
+    def get_current_track(self):
+        output = self.last_track.replace(f"{self.music_folder}\\", "")
+        output = output.replace(".mp3", "")
+        return output
