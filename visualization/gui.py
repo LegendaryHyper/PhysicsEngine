@@ -3,6 +3,7 @@ import ctypes
 import numpy as np
 from engine.analysis.energy import compute_energy_univ_grav
 from engine.core.body import Body, BodySystem
+from engine.forces.force_events import ForceEvent
 import time
 from scenarios.orbital_scenario import OrbitalScenario
 from scenarios.earth_surface_scenario import EarthSurfaceScenario
@@ -74,6 +75,17 @@ def run_gui(audio):
         except ValueError:
             print("Error: Please enter numerical values!")
         audio.play_sound("click")
+    
+    def apply_impulse_user():
+        try:
+            fx = float(dpg.get_value("input_impulse_x"))
+            fy = float(dpg.get_value("input_impulse_y"))
+            delta_t = float(dpg.get_value("input_impulse_time"))
+            sim.force_events.append(ForceEvent(body=active_body, force=np.array([fx, fy]), remaining_time=50*delta_t))
+        except ValueError:
+            print("Error: Please enter numerical values!")
+        audio.play_sound("click")
+            
     
     def clear_bodies():
         nonlocal active_body
@@ -187,8 +199,8 @@ def run_gui(audio):
         
         print("Switched state!")
     
-    with dpg.window(tag="main_menu_win", label="Physics Engine v1.1", width=400, height=300, pos=(560, 290)):
-        dpg.add_text("PHYSICS Engine v1.1")
+    with dpg.window(tag="main_menu_win", label="Physics Engine v1.2", width=400, height=300, pos=(560, 290)):
+        dpg.add_text("PHYSICS Engine v1.2")
         dpg.add_button(label="RUN", width=200, callback=lambda: switch_state("SCENARIO_SELECT"))
         dpg.add_button(label="EXIT", width=200, callback=exit_app)
     with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300, pos=(560, 290)):
@@ -203,7 +215,7 @@ def run_gui(audio):
         dpg.add_button(label="Pause/Resume", callback=toggle_pause)
         dpg.add_button(label="Auto Scale", callback=toggle_auto_scale)
         dpg.add_button(label="Clear Bodies", callback=clear_bodies)
-        dpg.add_slider_float(label="dt", tag="dt_slider", min_value = 0.001, max_value=500000, default_value=1, callback=set_dt)
+        dpg.add_slider_float(label="dt", tag="dt_slider", min_value = 0.001, max_value=250000, default_value=1, callback=set_dt)
         dpg.add_text(label="Time passed (days): ", tag="time_displayer")
         dpg.add_text(label="Playing", tag="pause_displayer")
         dpg.set_value("pause_displayer", "Playing")
@@ -223,6 +235,12 @@ def run_gui(audio):
         dpg.add_text(tag="body_mass")
         dpg.add_text(tag="body_position")
         dpg.add_text(tag="body_velocity")
+        dpg.add_text(tag="text_create_impulse")
+        dpg.set_value("text_create_impulse", "Create Impulse")
+        dpg.add_input_text(tag="input_impulse_x", hint="Force (x)")
+        dpg.add_input_text(tag="input_impulse_y", hint="Force (y)")
+        dpg.add_input_text(tag="input_impulse_time", hint="Impulse Duration (s)")
+        dpg.add_button(label="Apply Impulse", tag="apply_impulse_button", callback=apply_impulse_user)
         dpg.add_button(label="Delete Body", tag="delete_body_button", callback=delete_body)
     with dpg.window(tag="body_creation", label="Body Creation", show=False, width=400, height=200, pos=(520, 425)):
         input_name = dpg.add_input_text(tag="input_body_name", hint="Object Name")

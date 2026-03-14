@@ -1,8 +1,10 @@
 import numpy as np
 
+def apply_force(force_event):
+        force_event.body.force += force_event.force
+
 class Force:
-    def apply(self, body_system):
-        pass
+    pass
 
 class MutualGravity(Force):
     def __init__(self, G=6.67e-11):
