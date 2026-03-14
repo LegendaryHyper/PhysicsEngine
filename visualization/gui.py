@@ -17,11 +17,13 @@ def run_gui(audio):
     sim = None
     active_body = None
     halo_tag = None
+    frame_counter = 0
     
     orbit_data = []
     orbit_series_tags = []
     position_dot_tags = []
     times = []
+    real_times = []
     energies = []
     
     camera_center = np.array([0.0, 0.0])
@@ -29,8 +31,8 @@ def run_gui(audio):
     zoom_sensitivity = 0.1
     halo_size = 12
     max_trail = 2000
-    max_history = 2000
-    body_render_period = 3
+    history_time_window = 30
+    body_render_period = 1
     auto_scale = True
     paused = False
 
@@ -178,6 +180,7 @@ def run_gui(audio):
         orbit_series_tags.clear()
         position_dot_tags.clear()
         times.clear()
+        real_times.clear()
         energies.clear()
         
         for i, _ in enumerate(sim.body_system.bodies):
@@ -203,8 +206,8 @@ def run_gui(audio):
         
         print("Switched state!")
     
-    with dpg.window(tag="main_menu_win", label="Physics Engine v1.3", width=400, height=300, pos=(560, 290)):
-        dpg.add_text("PHYSICS Engine v1.3")
+    with dpg.window(tag="main_menu_win", label="Physics Engine v1.3.1", width=400, height=300, pos=(560, 290)):
+        dpg.add_text("PHYSICS Engine v1.3.1")
         dpg.add_button(label="RUN", width=200, callback=lambda: switch_state("SCENARIO_SELECT"))
         dpg.add_button(label="EXIT", width=200, callback=exit_app)
     with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300, pos=(560, 290)):
@@ -360,11 +363,10 @@ def run_gui(audio):
         
         audio.update()
         
-        scale = 500/(2 * camera_half_range)
-        
         if current_state == "SIMULATING" and sim is not None:
             if not paused:
                 sim.step()
+                frame_counter += 1
             
             if len(energies) > 1:
                 min_t = min(times)
@@ -408,18 +410,21 @@ def run_gui(audio):
                 cx, cy = camera_center
                 dpg.set_axis_limits(orbit_x_axis, cx - camera_half_range, cx + camera_half_range)
                 dpg.set_axis_limits(orbit_y_axis, cy - camera_half_range, cy + camera_half_range)
-                
-            times.append(sim.time / 86400)
-            energies.append(compute_energy_univ_grav(sim.body_system))
+            
+            if not paused:
+                times.append(sim.time / 86400)
+                real_times.append(sim.real_time)
+                energies.append(compute_energy_univ_grav(sim.body_system))
 
-            if len(times) > max_history:
-                times.pop(0)
-                energies.pop(0)
+                while len(real_times) > 2 and times and sim.real_time - real_times[0] > history_time_window:
+                    real_times.pop(0)
+                    times.pop(0)
+                    energies.pop(0)
             
             for i, body in enumerate(sim.body_system.bodies):
                 x, y = body.position
                 
-                if len(times) % body_render_period == 0:
+                if frame_counter % body_render_period == 0:
                     orbit_data[i]["x"].append(x)
                     orbit_data[i]["y"].append(y)
                 
@@ -436,6 +441,7 @@ def run_gui(audio):
                         position_dot_tags[i],
                         [[x], [y]]
                     )
+                    frame_counter = 0
                 
             dpg.set_value("energy_series", [times, energies])
             dpg.set_value("time_displayer", f"Time passed (days): {round((sim.time/86400), ndigits=1)}")
@@ -468,10 +474,8 @@ def run_gui(audio):
                 dpg.configure_item("input_impulse_time", show=False)
                 dpg.configure_item("apply_impulse_button", show=False)
                 dpg.configure_item("delete_body_button", show=False)
-                
             
             dpg.delete_item("hitbox_layer", children_only=True)
-            
             for body in sim.body_system.bodies:
                 dpg.draw_circle(
                     center=(body.position[0], body.position[1]),

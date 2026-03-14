@@ -1,5 +1,6 @@
 from engine.forces.forces import apply_force
 from engine.forces.collisions import resolve_collisions
+import time
 
 class Simulation:
     def __init__(self, body_system, forces, integrator, dt):
@@ -8,6 +9,8 @@ class Simulation:
         self.integrator = integrator
         self.dt = dt
         self.time = 0
+        self.start_real_time = time.perf_counter()
+        self.real_time = 0
         self.force_events = []
     
     def step(self):
@@ -29,3 +32,4 @@ class Simulation:
         for _ in range (3):
             resolve_collisions(body_system=self.body_system, e=0.1)
         self.time += self.dt
+        self.real_time = time.perf_counter() - self.start_real_time
