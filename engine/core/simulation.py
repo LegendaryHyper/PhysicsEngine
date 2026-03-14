@@ -1,4 +1,5 @@
 from engine.forces.forces import apply_force
+from engine.forces.collisions import resolve_collisions
 
 class Simulation:
     def __init__(self, body_system, forces, integrator, dt):
@@ -24,6 +25,7 @@ class Simulation:
             if event.remaining_time > 0:
                 alive_events.append(event)
         self.force_events = alive_events
-        
         self.integrator.step(self.body_system, self.dt)
+        for _ in range (3):
+            resolve_collisions(body_system=self.body_system, e=0.1)
         self.time += self.dt

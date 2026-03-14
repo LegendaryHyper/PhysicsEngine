@@ -28,6 +28,9 @@ def run_gui(audio):
     camera_half_range = 2e11
     zoom_sensitivity = 0.1
     halo_size = 12
+    max_trail = 2000
+    max_history = 2000
+    body_render_period = 3
     auto_scale = True
     paused = False
 
@@ -56,6 +59,7 @@ def run_gui(audio):
         try:
             name = dpg.get_value("input_body_name")
             mass = float(dpg.get_value("input_body_mass"))
+            radius = float(dpg.get_value("input_body_radius"))
             
             px = float(dpg.get_value("input_body_position_x"))
             py = float(dpg.get_value("input_body_position_y"))
@@ -63,7 +67,7 @@ def run_gui(audio):
             vx = float(dpg.get_value("input_body_velocity_x"))
             vy = float(dpg.get_value("input_body_velocity_y"))
 
-            new_body = Body(name=name, mass=mass, position=[px, py], velocity=[vx, vy])
+            new_body = Body(name=name, mass=mass, position=[px, py], velocity=[vx, vy], radius=radius)
             sim.body_system.bodies.append(new_body)
             
             orbit_data.append({"x": [], "y": []})
@@ -199,8 +203,8 @@ def run_gui(audio):
         
         print("Switched state!")
     
-    with dpg.window(tag="main_menu_win", label="Physics Engine v1.2", width=400, height=300, pos=(560, 290)):
-        dpg.add_text("PHYSICS Engine v1.2")
+    with dpg.window(tag="main_menu_win", label="Physics Engine v1.3", width=400, height=300, pos=(560, 290)):
+        dpg.add_text("PHYSICS Engine v1.3")
         dpg.add_button(label="RUN", width=200, callback=lambda: switch_state("SCENARIO_SELECT"))
         dpg.add_button(label="EXIT", width=200, callback=exit_app)
     with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300, pos=(560, 290)):
@@ -212,6 +216,8 @@ def run_gui(audio):
         with dpg.plot(label="Orbit", tag="pos_displayer", height=500, width=500, no_mouse_pos=True, no_box_select=True, no_menus=True):
             orbit_x_axis = dpg.add_plot_axis(dpg.mvXAxis, tag="orbit_x_axis")
             orbit_y_axis = dpg.add_plot_axis(dpg.mvYAxis, tag="orbit_y_axis")
+            with dpg.draw_layer(tag="hitbox_layer"):
+                pass
         dpg.add_button(label="Pause/Resume", callback=toggle_pause)
         dpg.add_button(label="Auto Scale", callback=toggle_auto_scale)
         dpg.add_button(label="Clear Bodies", callback=clear_bodies)
@@ -230,9 +236,10 @@ def run_gui(audio):
         dpg.add_slider_float(label="Audio volume", min_value=0.0, max_value=1, default_value=1, callback=set_audio_volume)
         dpg.add_button(label="Main Menu", tag="main_menu_button", callback=lambda: switch_state("MAIN_MENU"))
         dpg.add_button(label="Exit", tag="exit_button", callback=exit_app)
-    with dpg.window(tag="body_info", label="Body Info", show=False, width=400, height=125, pos=(520, 290)):
+    with dpg.window(tag="body_info", label="Body Info", show=False, width=450, height=125, pos=(520, 290)):
         dpg.add_text(tag="body_name")
         dpg.add_text(tag="body_mass")
+        dpg.add_text(tag="body_radius")
         dpg.add_text(tag="body_position")
         dpg.add_text(tag="body_velocity")
         dpg.add_text(tag="text_create_impulse")
@@ -245,6 +252,7 @@ def run_gui(audio):
     with dpg.window(tag="body_creation", label="Body Creation", show=False, width=400, height=200, pos=(520, 425)):
         input_name = dpg.add_input_text(tag="input_body_name", hint="Object Name")
         input_mass = dpg.add_input_text(tag="input_body_mass", hint="Object Mass (kg)")
+        input_radius = dpg.add_input_text(tag="input_body_radius", hint="Object Radius (m)")
         dpg.add_text("Position (m)")
         input_position_x = dpg.add_input_text(tag="input_body_position_x", hint="x")
         input_position_y = dpg.add_input_text(tag="input_body_position_y", hint="y")
@@ -352,6 +360,8 @@ def run_gui(audio):
         
         audio.update()
         
+        scale = 500/(2 * camera_half_range)
+        
         if current_state == "SIMULATING" and sim is not None:
             if not paused:
                 sim.step()
@@ -402,20 +412,30 @@ def run_gui(audio):
             times.append(sim.time / 86400)
             energies.append(compute_energy_univ_grav(sim.body_system))
 
+            if len(times) > max_history:
+                times.pop(0)
+                energies.pop(0)
+            
             for i, body in enumerate(sim.body_system.bodies):
                 x, y = body.position
                 
-                orbit_data[i]["x"].append(x)
-                orbit_data[i]["y"].append(y)
+                if len(times) % body_render_period == 0:
+                    orbit_data[i]["x"].append(x)
+                    orbit_data[i]["y"].append(y)
                 
-                dpg.set_value(
-                    orbit_series_tags[i],
-                    [orbit_data[i]["x"], orbit_data[i]["y"]]
-                )
-                dpg.set_value(
-                    position_dot_tags[i],
-                    [[x], [y]]
-                )
+                    if len(orbit_data[i]["x"]) > max_trail:
+                        orbit_data[i]["x"].pop(0)
+                        orbit_data[i]["y"].pop(0)
+                
+                    dpg.set_value(
+                        orbit_series_tags[i],
+                        [orbit_data[i]["x"], orbit_data[i]["y"]]
+                    )
+                
+                    dpg.set_value(
+                        position_dot_tags[i],
+                        [[x], [y]]
+                    )
                 
             dpg.set_value("energy_series", [times, energies])
             dpg.set_value("time_displayer", f"Time passed (days): {round((sim.time/86400), ndigits=1)}")
@@ -426,17 +446,39 @@ def run_gui(audio):
                 
                 dpg.set_value("body_name", active_body.name)
                 dpg.set_value("body_mass", f"Mass: {active_body.mass}")
+                dpg.set_value("body_radius", f"Radius: {active_body.radius}")
                 dpg.set_value("body_position", f"Position (x, y): ({x}, {y})")
                 dpg.set_value("body_velocity", f"Velocity: {round((vx**2+vy**2)**0.5, 2)} m/s")
+                dpg.set_value("text_create_impulse", "Create Impulse")
+                dpg.configure_item("input_impulse_x", show=True)
+                dpg.configure_item("input_impulse_y", show=True)
+                dpg.configure_item("input_impulse_time", show=True)
+                dpg.configure_item("apply_impulse_button", show=True)
                 dpg.configure_item("delete_body_button", show=True)
             else:
                 dpg.set_value(halo_tag, [[], []])
                 dpg.set_value("body_name", "No body selected")
                 dpg.set_value("body_mass", "")
+                dpg.set_value("body_radius", "")
                 dpg.set_value("body_position", "")
                 dpg.set_value("body_velocity", "")
+                dpg.set_value("text_create_impulse", "")
+                dpg.configure_item("input_impulse_x", show=False)
+                dpg.configure_item("input_impulse_y", show=False)
+                dpg.configure_item("input_impulse_time", show=False)
+                dpg.configure_item("apply_impulse_button", show=False)
                 dpg.configure_item("delete_body_button", show=False)
+                
             
+            dpg.delete_item("hitbox_layer", children_only=True)
+            
+            for body in sim.body_system.bodies:
+                dpg.draw_circle(
+                    center=(body.position[0], body.position[1]),
+                    radius=body.radius,
+                    color=(155, 155, 0),
+                    thickness=1,
+                    parent="hitbox_layer"
+                )
         dpg.render_dearpygui_frame()
-
     dpg.destroy_context()
