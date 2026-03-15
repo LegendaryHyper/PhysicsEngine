@@ -5,7 +5,7 @@ from engine.integrators.semi_implicit_euler import SemiImplicitEuler
 
 class EarthSurfaceScenario:
     def create_simulation(self):
-        ball = Body("Ball", mass=1.0, position=[0.0, 100.0], velocity=[10.0, 0.0])
+        ball = Body("Ball", mass=1.0, position=[0.0, 100.0], velocity=[10.0, 0.0], radius=1.0)
         system = BodySystem([ball])
 
         gravity = DownwardsGravity(g=9.81) 

@@ -16,6 +16,7 @@ def run_gui(audio):
     print(f"Running on DearPyGUI {dpg.get_dearpygui_version()}")
     
     current_state = "MAIN_MENU"
+    current_t_units = ""
     sim = None
     active_body = None
     halo_tag = None
@@ -32,8 +33,8 @@ def run_gui(audio):
     camera_half_range = 2e11
     zoom_sensitivity = 0.1
     halo_size = 12
-    max_trail = 2000
-    history_time_window = 30
+    max_trail = 25000
+    history_time_window = 60
     body_render_period = 1
     auto_scale = True
     paused = False
@@ -58,7 +59,15 @@ def run_gui(audio):
         audio.play_sound("click")
         time.sleep(0.25)
         dpg.stop_dearpygui()
-        
+
+    def switch_current_unit_t():
+        nonlocal current_t_units
+        units_time = ["MILLISECONDS", "SECONDS", "MINUTES", "HOURS", "DAYS", "WEEKS", "MONTHS", "YEARS"]
+        if units_time.index(current_t_units) == len(units_time) - 1:
+            current_t_units = units_time[0]
+        else:
+            current_t_units = units_time[units_time.index(current_t_units) + 1]
+    
     def create_body():
         try:
             name = dpg.get_value("input_body_name")
@@ -138,7 +147,7 @@ def run_gui(audio):
         audio.play_sound("click")
         
     def set_dt(sender, app_data):
-        sim.dt = app_data
+        sim.dt = 10**app_data
     
     def switch_state(new_state):
         nonlocal current_state
@@ -159,16 +168,18 @@ def run_gui(audio):
         audio.play_sound("click")
     
     def load_scenario(scenario_name):
-        nonlocal sim, orbit_data, orbit_series_tags, position_dot_tags, times, energies, camera_half_range, halo_tag
+        nonlocal sim, orbit_data, orbit_series_tags, position_dot_tags, times, energies, camera_half_range, halo_tag, current_t_units
         print("Loading...")
         try:
             new_sim = None
             if scenario_name == "orbital":
                 new_sim = OrbitalScenario().create_simulation()
                 camera_half_range = 2e11
+                current_t_units = "DAYS"
             elif scenario_name == "earth_surface":
                 new_sim = EarthSurfaceScenario().create_simulation()
                 camera_half_range = 1e5
+                current_t_units = "SECONDS"
 
             if new_sim is None:
                 print("FAIL: create_simulation() returned None!")
@@ -211,14 +222,14 @@ def run_gui(audio):
         
         dpg.bind_item_theme(halo_tag, halo_theme)
         
-        dpg.configure_item("dt_slider", default_value=sim.dt)
+        dpg.configure_item("dt_slider", default_value=np.log10(sim.dt))
         
         switch_state("SIMULATING")
         
         print("Switched state!")
     
-    with dpg.window(tag="main_menu_win", label="PHYSICS ENGINE v1.4", width=400, height=300, pos=(560, 290)):
-        dpg.add_text("Physics Engine v1.4")
+    with dpg.window(tag="main_menu_win", label="PHYSICS ENGINE v1.4.1", width=400, height=300, pos=(560, 290)):
+        dpg.add_text("Physics Engine v1.4.1")
         dpg.add_button(label="RUN", width=200, callback=lambda: switch_state("SCENARIO_SELECT"))
         dpg.add_button(label="EXIT", width=200, callback=exit_app)
     with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300, pos=(560, 290)):
@@ -235,8 +246,10 @@ def run_gui(audio):
         dpg.add_button(label="Pause/Resume", callback=toggle_pause)
         dpg.add_button(label="Auto Scale", callback=toggle_auto_scale)
         dpg.add_button(label="Clear Bodies", callback=clear_bodies)
-        dpg.add_slider_float(label="dt", tag="dt_slider", min_value = 0.001, max_value=250000, default_value=1, callback=set_dt)
+        dpg.add_slider_float(label="dt", tag="dt_slider", min_value = -6, max_value=6, default_value=1, callback=set_dt)
+        dpg.add_text(label="Current dt: ", tag="current_dt_displayer")
         dpg.add_text(label="Time passed (days): ", tag="time_displayer")
+        dpg.add_button(label="Change Units (t)", tag="time_unit_switcher", callback=switch_current_unit_t)
         dpg.add_text(label="Playing", tag="pause_displayer")
         dpg.set_value("pause_displayer", "Playing")
     with dpg.window(tag="energy_display", label="Energy Graph in Time", pos=(520, 0), show=False):
@@ -253,8 +266,8 @@ def run_gui(audio):
         dpg.add_text("")
         dpg.add_text(tag="advanced_settings", label="Advanced Settings")
         dpg.set_value("advanced_settings", "Advanced Settings")
-        dpg.add_input_text(tag="max_trail_input", hint="Max Trail (def. 2000)")
-        dpg.add_input_text(tag="history_time_window_input", hint="History Time Window (def. 30s)")
+        dpg.add_input_text(tag="max_trail_input", hint="Max Trail (def. 25000)")
+        dpg.add_input_text(tag="history_time_window_input", hint="History Time Window (def. 60s)")
         dpg.add_button(label="Apply Settings", tag="apply_settings_window", callback=apply_advanced_settings)
     with dpg.window(tag="body_info", label="Body Info", show=False, width=450, height=125, pos=(520, 290)):
         dpg.add_text(tag="body_name")
@@ -281,7 +294,6 @@ def run_gui(audio):
         input_velocity_y = dpg.add_input_text(tag="input_body_velocity_y", hint="y")
         dpg.add_button(tag="create_body_button", label="Create Body", callback=create_body)
     
-    
     user32 = ctypes.windll.user32
     screen_width = user32.GetSystemMetrics(0)
     screen_height = user32.GetSystemMetrics(1)
@@ -290,6 +302,7 @@ def run_gui(audio):
         title="Orbital Engine",
         width=screen_width,
         height=screen_height,
+        clear_color=(0, 0, 0, 0),
         decorated=False
     )
 
@@ -380,8 +393,6 @@ def run_gui(audio):
         
         audio.update()
         dpg.set_value("music_name_displayer", f"Now playing: {audio.get_current_track()}")
-        
-        
         if current_state == "SIMULATING" and sim is not None:
             if not paused:
                 sim.step()
@@ -463,7 +474,28 @@ def run_gui(audio):
                     frame_counter = 0
                 
             dpg.set_value("energy_series", [times, energies])
-            dpg.set_value("time_displayer", f"Time passed (days): {round((sim.time/86400), ndigits=1)}")
+            if current_t_units == "MILLISECONDS":
+                dpg.set_value("time_displayer", f"Time passed (ms): {round((sim.time*1000), ndigits=1)}")
+            elif current_t_units == "SECONDS":
+                dpg.set_value("time_displayer", f"Time passed (s): {round((sim.time), ndigits=1)}")
+            elif current_t_units == "MINUTES":
+                dpg.set_value("time_displayer", f"Time passed (mins): {round((sim.time/60), ndigits=1)}")
+            elif current_t_units == "HOURS":
+                dpg.set_value("time_displayer", f"Time passed (hours): {round((sim.time/3600), ndigits=1)}")
+            elif current_t_units == "DAYS":
+                dpg.set_value("time_displayer", f"Time passed (days): {round((sim.time/86400), ndigits=1)}")
+            elif current_t_units == "WEEKS":
+                dpg.set_value("time_displayer", f"Time passed (weeks): {round((sim.time/604800), ndigits=1)}")
+            elif current_t_units == "MONTHS":
+                dpg.set_value("time_displayer", f"Time passed (months): {round((sim.time/2629800), ndigits=1)}")
+            elif current_t_units == "YEARS":
+                dpg.set_value("time_displayer", f"Time passed (years): {round((sim.time/31557600), ndigits=1)}")
+            cur_dt = 0
+            if sim.dt >= 1:
+                cur_dt = round(sim.dt, 2)
+            else:
+                cur_dt = round(sim.dt, 8)
+            dpg.set_value("current_dt_displayer", f"Current dt: {cur_dt}")
             if active_body:
                 vx, vy = active_body.velocity
                 x, y = active_body.position
