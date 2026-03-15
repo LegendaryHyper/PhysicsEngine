@@ -10,6 +10,12 @@ from engine.forces.force_events import ForceEvent
 from scenarios.orbital_scenario import OrbitalScenario
 from scenarios.earth_surface_scenario import EarthSurfaceScenario
 
+from engine.integrators.explicit_euler import ExplicitEuler
+from engine.integrators.semi_implicit_euler import SemiImplicitEuler
+from engine.integrators.velocity_verlet import VelocityVerlet
+from engine.integrators.leapfrog import Leapfrog
+from engine.integrators.rk4 import RungeKutta4
+
 def run_gui(audio):
     
     dpg.create_context()
@@ -28,6 +34,7 @@ def run_gui(audio):
     times = []
     real_times = []
     energies = []
+    integrators_list = ["Explicit Euler", "Semi-Implicit Euler", "Velocity Verlet", "Leapfrog", "Runge-Kutta 4"]
     
     camera_center = np.array([0.0, 0.0])
     camera_half_range = 2e11
@@ -104,10 +111,11 @@ def run_gui(audio):
         audio.play_sound("click")
     
     def apply_advanced_settings():
-        nonlocal max_trail, history_time_window
+        nonlocal max_trail, history_time_window, body_render_period
         try:
             max_trail = int(dpg.get_value("max_trail_input"))
             history_time_window = int(dpg.get_value("history_time_window_input"))
+            body_render_period = int(dpg.get_value("body_render_period_input"))
         except ValueError:
             print("Error: Please enter numerical values!")
         audio.play_sound("click")
@@ -148,6 +156,17 @@ def run_gui(audio):
         
     def set_dt(sender, app_data):
         sim.dt = 10**app_data
+    def switch_integrators(sender, app_data):
+        if app_data == "Explicit Euler":
+            sim.integrator = ExplicitEuler()
+        elif app_data == "Semi-Implicit Euler":
+            sim.integrator = SemiImplicitEuler()
+        elif app_data == "Velocity Verlet":
+            sim.integrator = VelocityVerlet()
+        elif app_data == "Leapfrog":
+            sim.integrator = Leapfrog()
+        elif app_data == "Runge-Kutta 4":
+            sim.integrator = RungeKutta4()
     
     def switch_state(new_state):
         nonlocal current_state
@@ -224,12 +243,14 @@ def run_gui(audio):
         
         dpg.configure_item("dt_slider", default_value=np.log10(sim.dt))
         
+        dpg.configure_item("integrator_selection_combo", default_value=sim.integrator)
+        
         switch_state("SIMULATING")
         
         print("Switched state!")
     
-    with dpg.window(tag="main_menu_win", label="PHYSICS ENGINE v1.4.1", width=400, height=300, pos=(560, 290)):
-        dpg.add_text("Physics Engine v1.4.1")
+    with dpg.window(tag="main_menu_win", label="PHYSICS ENGINE v1.5", width=400, height=300, pos=(560, 290)):
+        dpg.add_text("Physics Engine v1.5")
         dpg.add_button(label="RUN", width=200, callback=lambda: switch_state("SCENARIO_SELECT"))
         dpg.add_button(label="EXIT", width=200, callback=exit_app)
     with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300, pos=(560, 290)):
@@ -257,7 +278,7 @@ def run_gui(audio):
             energy_x_axis = dpg.add_plot_axis(dpg.mvXAxis)
             energy_y_axis = dpg.add_plot_axis(dpg.mvYAxis)
             dpg.add_line_series([], [], tag="energy_series", parent=energy_y_axis)
-    with dpg.window(tag="settings_window", label="Settings", width=330, height=150, pos=(1210, 0), show=False):
+    with dpg.window(tag="settings_window", label="Settings", width=400, height=150, pos=(1135, 0), show=False):
         dpg.add_text(label="Now playing: ", tag="music_name_displayer")
         dpg.add_slider_float(label="Music volume", min_value=0.0, max_value=1, default_value=0.05, callback=set_music_volume)
         dpg.add_slider_float(label="Audio volume", min_value=0.0, max_value=1, default_value=1, callback=set_audio_volume)
@@ -268,6 +289,8 @@ def run_gui(audio):
         dpg.set_value("advanced_settings", "Advanced Settings")
         dpg.add_input_text(tag="max_trail_input", hint="Max Trail (def. 25000)")
         dpg.add_input_text(tag="history_time_window_input", hint="History Time Window (def. 60s)")
+        dpg.add_input_text(tag="body_render_period_input", hint="Body Render Period (def. 1)")
+        dpg.add_combo(label="Set Integrator", tag="integrator_selection_combo", items=integrators_list, default_value=None, callback=switch_integrators)
         dpg.add_button(label="Apply Settings", tag="apply_settings_window", callback=apply_advanced_settings)
     with dpg.window(tag="body_info", label="Body Info", show=False, width=450, height=125, pos=(520, 290)):
         dpg.add_text(tag="body_name")

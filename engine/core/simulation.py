@@ -14,12 +14,14 @@ class Simulation:
         self.force_events = []
     
     def step(self):
+        self.integrator.step(self.body_system, self.dt, self.compute_forces)
+        self.time += self.dt
+        self.real_time = time.perf_counter() - self.start_real_time
+    def compute_forces(self):
         for body in self.body_system.bodies:
             body.force[:] = 0
         for force in self.forces:
             force.apply(self.body_system)
-        for force_event in self.force_events:
-            apply_force(force_event=force_event)
         alive_events = []
         for event in self.force_events:
             event.body.force += event.force
@@ -28,8 +30,7 @@ class Simulation:
             if event.remaining_time > 0:
                 alive_events.append(event)
         self.force_events = alive_events
-        self.integrator.step(self.body_system, self.dt)
+        for force_event in self.force_events:
+            apply_force(force_event=force_event)
         for _ in range (3):
             resolve_collisions(body_system=self.body_system, e=0.1)
-        self.time += self.dt
-        self.real_time = time.perf_counter() - self.start_real_time

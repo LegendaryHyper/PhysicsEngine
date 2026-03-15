@@ -2,6 +2,9 @@ from engine.core.body import Body, BodySystem
 from engine.core.simulation import Simulation
 from engine.forces.forces import MutualGravity
 from engine.integrators.semi_implicit_euler import SemiImplicitEuler
+from engine.integrators.velocity_verlet import VelocityVerlet
+from engine.integrators.rk4 import RungeKutta4
+from engine.integrators.leapfrog import Leapfrog
 
 class OrbitalScenario:
     def create_simulation(self):
@@ -11,7 +14,7 @@ class OrbitalScenario:
         
         system = BodySystem([earth, moon, sun])
         gravity = MutualGravity()
-        integrator = SemiImplicitEuler()
+        integrator = Leapfrog()
 
         sim_dt = 14400
 
