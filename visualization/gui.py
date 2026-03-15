@@ -249,8 +249,8 @@ def run_gui(audio):
         
         print("Switched state!")
     
-    with dpg.window(tag="main_menu_win", label="PHYSICS ENGINE v1.5", width=400, height=300, pos=(560, 290)):
-        dpg.add_text("Physics Engine v1.5")
+    with dpg.window(tag="main_menu_win", label="PHYSICS ENGINE v1.5.1", width=400, height=300, pos=(560, 290)):
+        dpg.add_text("Physics Engine v1.5.1")
         dpg.add_button(label="RUN", width=200, callback=lambda: switch_state("SCENARIO_SELECT"))
         dpg.add_button(label="EXIT", width=200, callback=exit_app)
     with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300, pos=(560, 290)):
@@ -264,9 +264,10 @@ def run_gui(audio):
             orbit_y_axis = dpg.add_plot_axis(dpg.mvYAxis, tag="orbit_y_axis")
             with dpg.draw_layer(tag="hitbox_layer"):
                 pass
-        dpg.add_button(label="Pause/Resume", callback=toggle_pause)
-        dpg.add_button(label="Auto Scale", callback=toggle_auto_scale)
-        dpg.add_button(label="Clear Bodies", callback=clear_bodies)
+        with dpg.group(horizontal=True):
+            dpg.add_button(label="Pause/Resume", callback=toggle_pause)
+            dpg.add_button(label="Auto Scale", callback=toggle_auto_scale)
+            dpg.add_button(label="Clear Bodies", callback=clear_bodies)
         dpg.add_slider_float(label="dt", tag="dt_slider", min_value = -6, max_value=6, default_value=1, callback=set_dt)
         dpg.add_text(label="Current dt: ", tag="current_dt_displayer")
         dpg.add_text(label="Time passed (days): ", tag="time_displayer")
@@ -284,14 +285,12 @@ def run_gui(audio):
         dpg.add_slider_float(label="Audio volume", min_value=0.0, max_value=1, default_value=1, callback=set_audio_volume)
         dpg.add_button(label="Main Menu", tag="main_menu_button", callback=lambda: switch_state("MAIN_MENU"))
         dpg.add_button(label="Exit", tag="exit_button", callback=exit_app)
-        dpg.add_text("")
-        dpg.add_text(tag="advanced_settings", label="Advanced Settings")
-        dpg.set_value("advanced_settings", "Advanced Settings")
-        dpg.add_input_text(tag="max_trail_input", hint="Max Trail (def. 25000)")
-        dpg.add_input_text(tag="history_time_window_input", hint="History Time Window (def. 60s)")
-        dpg.add_input_text(tag="body_render_period_input", hint="Body Render Period (def. 1)")
-        dpg.add_combo(label="Set Integrator", tag="integrator_selection_combo", items=integrators_list, default_value=None, callback=switch_integrators)
-        dpg.add_button(label="Apply Settings", tag="apply_settings_window", callback=apply_advanced_settings)
+        with dpg.tree_node(tag="advanced_settings_tree_node", label="Advanced Settings"):
+            dpg.add_input_text(tag="max_trail_input", hint="Max Trail (def. 25000)")
+            dpg.add_input_text(tag="history_time_window_input", hint="History Time Window (def. 60s)")
+            dpg.add_input_text(tag="body_render_period_input", hint="Body Render Period (def. 1)")
+            dpg.add_combo(label="Set Integrator", tag="integrator_selection_combo", items=integrators_list, default_value=None, callback=switch_integrators)
+            dpg.add_button(label="Apply Settings", tag="apply_settings_window", callback=apply_advanced_settings)
     with dpg.window(tag="body_info", label="Body Info", show=False, width=450, height=125, pos=(520, 290)):
         dpg.add_text(tag="body_name")
         dpg.add_text(tag="body_mass")
