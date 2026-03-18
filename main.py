@@ -3,7 +3,7 @@ from audio.audio_manager import AudioManager
 from visualization.gui import run_gui
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ENGINE_VER = "v1.5.1a"
+ENGINE_VER = "v1.5.1b"
 music_path = os.path.join(BASE_DIR, "audio", "music")
 sound_path = os.path.join(BASE_DIR, "audio", "sound")
 

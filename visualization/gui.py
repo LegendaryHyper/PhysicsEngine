@@ -257,8 +257,8 @@ def run_gui(audio):
         
         print("Switched state!")
     
-    with dpg.window(tag="main_menu_win", label="PHYSICS ENGINE v1.5.1a", width=400, height=300, pos=(560, 290)):
-        dpg.add_text("Physics Engine v1.5.1a")
+    with dpg.window(tag="main_menu_win", label="PHYSICS ENGINE v1.5.1b", width=400, height=300, pos=(560, 290)):
+        dpg.add_text("Physics Engine v1.5.1b")
         dpg.add_button(label="RUN", width=200, callback=lambda: switch_state("SCENARIO_SELECT"))
         dpg.add_button(label="EXIT", width=200, callback=exit_app)
     with dpg.window(tag="scenario_win", label="Select Scenario", show=False, width=400, height=300, pos=(560, 290)):
@@ -297,7 +297,7 @@ def run_gui(audio):
             dpg.add_input_text(tag="max_trail_input", hint="Max Trail (def. 25000)")
             dpg.add_input_text(tag="history_time_window_input", hint="History Time Window (def. 60s)")
             dpg.add_input_text(tag="body_render_period_input", hint="Body Render Period (def. 1)")
-            dpg.add_combo(label="Set Integrator", tag="integrator_selection_combo", items=integrators_list, default_value=None)
+            dpg.add_combo(label="Set Integrator", tag="integrator_selection_combo", items=integrators_list, default_value=None, callback=switch_integrators)
             dpg.add_button(label="Apply Settings", tag="apply_settings_window", callback=apply_advanced_settings)
     with dpg.window(tag="body_info", label="Body Info", show=False, width=450, height=125, pos=(520, 290)):
         dpg.add_text(tag="body_name")
