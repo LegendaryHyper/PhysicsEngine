@@ -64,11 +64,11 @@ This project is a self-initiated attempt at combining Python and physics by simu
 git clone https://github.com/LegendaryHyper/PhysicsEngine.git
 cd PhysicsEngine
 ```
-3. Install dependencies:
+2. Install dependencies:
 ```
 pip install numpy dearpygui pygame
 ```
-5. Run the engine:
+3. Run the engine:
 ```bash
 python main.py
 ```
