@@ -60,8 +60,8 @@ This project is a self-initiated attempt at combining Python and physics by simu
 * Standard libraries (ctypes, os, time).
 ## Quick Start
 1. Clone the repository:
-```git clone https://github.com/LegendaryHyper/PhysicsEngine.git
-cd PhysicsEngine```
+```git clone https://github.com/LegendaryHyper/PhysicsEngine.git```
+```cd PhysicsEngine```
 2. Install dependencies:
 ```pip install numpy dearpygui pygame```
 3. Run the engine:
